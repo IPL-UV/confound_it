@@ -1,5 +1,6 @@
 source("methods.R")
 source("evaluations.R")
+library("reshape2")
 
 res_dir <- "results"
 
@@ -13,7 +14,7 @@ for (filename in allfiles){
   
   
   con <- file(filename)
-  info <- readLines(con, 17)
+  info <- readLines(con, 18)
   parsed <- sapply(info, function(x) strsplit(gsub("# ", "", x), " = "))
   names(parsed) <- lapply(parsed, function(x) x[1])
   data <- read.csv(con, header = TRUE, comment.char = "#")
@@ -41,15 +42,25 @@ for (filename in allfiles){
     meth(x = x, y = y, proxy = U, rank = 20)
   })
   
+  evals <- sapply(results, function(res){
+    sapply(evaluations, function(eval) eval(res, Z, args))
+  })
   ### save results:
   
   for (nm in names(results)){
     dir.create(file.path(res_dir, nm), recursive = TRUE, showWarnings = FALSE)
+    
     write.csv(results[[nm]], file = file.path(res_dir, nm, name), row.names = FALSE)
   }
   
-  print(args[c("noise", "dist")])
-  print(sapply(results, function(res){
-    sapply(evaluations, function(eval) eval(res, Z, args))
-  }))
+  EE <- reshape2::melt(evals, varnames = c("stats", "method"))
+  EE <- cbind(EE, args[c("ic", "causal_coeff", "dist", "noise", "latents",
+                         "confounders", "proxy", "size", "noisesd", "distsd",
+                         "independent")])
+  a <- tail(args$coefx, 1)
+  b <- tail(args$coefy, 1)
+  c <- args$causal_coeff
+  EE$ab_c <- a*b - c
+  
+  write.csv(EE, file = file.path(res_dir, name), row.names = FALSE)
 }
