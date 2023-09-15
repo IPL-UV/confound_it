@@ -55,7 +55,7 @@ for (filename in allfiles){
   
   EE <- reshape2::melt(evals, varnames = c("stats", "method"))
   EE <- cbind(EE, args[c("ic", "causal_coeff", "dist", "noise", "latents",
-                         "confounders", "proxy", "size", "noisesd", "distsd",
+                         "confounder", "proxy", "size", "noisesd", "distsd",
                          "independent")])
   a <- tail(args$coefx, 1)
   b <- tail(args$coefy, 1)
