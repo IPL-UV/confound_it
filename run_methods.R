@@ -8,7 +8,7 @@ data_dir <- "data"
 
 allfiles <- list.files(path = data_dir, recursive = TRUE, pattern = "*.csv",  full.names = TRUE)
 
-
+methods <- methods["optim_pval_ica"]
 for (filename in allfiles){
   name <- basename(filename)
   
@@ -24,13 +24,6 @@ for (filename in allfiles){
   parsed$noise[2] <- paste0("\"", parsed$noise[2], "\"")
   args <- lapply(parsed, function(x) eval(parse(text=x[2])))
   names(args) <- lapply(parsed, function(x) x[1])
-  
-  
-  methods <- list(
-    sel_ica = sel_ica,
-    sel_pca = sel_pca,
-    optim_pval = optim_pval
-  )
   
   
   x <- data$X
@@ -62,5 +55,5 @@ for (filename in allfiles){
   c <- args$causal_coeff
   EE$ab_c <- a*b - c
   
-  write.csv(EE, file = file.path(res_dir, name), row.names = FALSE)
+  write.csv(EE, file = file.path(res_dir, paste0("optim_pval_ica_", name)), row.names = FALSE)
 }

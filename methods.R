@@ -30,22 +30,21 @@ RES <- function(zz, UU, x, y){
 
 
 
-optim_pval <- function(x, y, proxy, rank = 10){
+optim_pval <- function(x, y, proxy, rank = 10, ica = FALSE){
   
   ## define objective function
   fopt <- function(w, UU){
     w <- w / sqrt(sum(w^2))
     zz <- UU %*% w
-    
     rr <- RES(zz, UU, x, y)
-    
-    #return(min(rr$py, rr$px))
-    #-rr$fy - rr$fx
     log(rr$px + rr$py)
   }
   
-  #Ureduced <- fastICA::fastICA(proxy, n.comp = rank)$S
-  Ureduced <- prcomp(proxy, rank. = rank, scale. = TRUE)$x
+  if (ica){
+    Ureduced <- fastICA::fastICA(proxy, n.comp = rank)$S
+  } else {
+    Ureduced <- prcomp(proxy, rank. = rank, scale. = TRUE)$x
+  }
   
   ## initial point
   win <- rep(0.5, ncol(Ureduced))
@@ -92,3 +91,16 @@ sel_ica <- function(x, y, proxy, rank = 10, ...){
   zest <- Ureduced[,imin]
   return(zest)
 }
+
+
+methods <- list(
+  sel_ica = sel_ica,
+  sel_pca = sel_pca,
+  optim_pval = function(x, y, proxy, rank = 10) optim_pval(x, y, proxy = proxy,
+                                                           rank = rank,
+                                                           ica = FALSE),
+  optim_pval_ica = function(x, y, proxy, rank = 10) optim_pval(x, y, 
+                                                               proxy = proxy,
+                                                               rank = rank,
+                                                               ica = TRUE)
+)

@@ -4,9 +4,9 @@ allfiles <- list.files("results/", pattern = "*.csv", recursive = FALSE, full.na
 allres <- lapply(allfiles, read.csv)
 
 DD <- reshape2::melt(allres, id.vars = names(allres[[1]]))
-
+DD$ab_c_inv <- 1 / DD$ab_c
 
 library(ggplot2)
 
-ggplot(DD) + geom_line(aes(y = value, x = abs(ab_c), group = method, colour = method)) + 
-  facet_grid(rows = vars(dist, noise), cols = vars(stats))
+ggplot(DD) + stat_smooth(aes(y = value, x = abs(ab_c), group = method, colour = method)) + 
+  facet_grid(rows = vars(dist), cols = vars(stats))
