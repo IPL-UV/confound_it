@@ -93,14 +93,38 @@ sel_ica <- function(x, y, proxy, rank = 10, ...){
 }
 
 
+pls_1 <- function(x, y, proxy, rank = 10, ...){
+  res <- ropls::opls(x = proxy, y = cbind(x,y), predI = rank,
+                     fig.pdfC = "none", info.txtC = "none")
+  est <- res@scoreMN
+  return(unname(est[,1]))
+}
+
+pls_sel <- function(x, y, proxy, rank = 10, ...){
+  res <- ropls::opls(x = proxy, y = cbind(x,y), predI = rank,
+                     fig.pdfC = "none", info.txtC = "none")
+  est <- res@scoreMN
+  res <- lapply(seq_len(ncol(est)), function(i){
+    RES(est[,i], est, x, y)
+  })
+  
+  pvals <- sapply(res, function(rr) rr$px + rr$py)
+  
+  imin <- which.min(pvals)
+  return(unname(est[,imin]))
+  }
+
 methods <- list(
+  pca1 = function(x, y, proxy, ...){return(prcomp(proxy, rank. = 1, ...)$x)},
+  pls1 = pls_1,
+  pls_sel = pls_sel,
   sel_ica = sel_ica,
-  sel_pca = sel_pca,
-  optim_pval = function(x, y, proxy, rank = 10) optim_pval(x, y, proxy = proxy,
-                                                           rank = rank,
-                                                           ica = FALSE),
-  optim_pval_ica = function(x, y, proxy, rank = 10) optim_pval(x, y, 
-                                                               proxy = proxy,
-                                                               rank = rank,
-                                                               ica = TRUE)
+  sel_pca = sel_pca#,
+  #optim_pval = function(x, y, proxy, rank = 10) optim_pval(x, y, proxy = proxy,
+  #                                                         rank = rank,
+  #                                                         ica = FALSE),
+  #optim_pval_ica = function(x, y, proxy, rank = 10) optim_pval(x, y, 
+  #                                                             proxy = proxy,
+  #                                                             rank = rank,
+  #                                                             ica = TRUE)
 )

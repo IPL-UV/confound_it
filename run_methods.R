@@ -1,15 +1,40 @@
 source("methods.R")
 source("evaluations.R")
 library("reshape2")
+library("pbapply")
 
-res_dir <- "results"
+library("optparse")
 
-data_dir <- "data"
+option_list = list(
+  make_option(c("--datadir"), type="character", default="data", 
+              help="data directory [default= %default]", metavar="character"),
+  make_option(c("--outdir"), type="character", default="results", 
+              help="output directory [default= %default]", metavar="character"),
+  make_option(c("--ncl"), type="integer", default=as.integer(1), 
+              help="number of parallel process to use [default= %default]", metavar="integer"),
+  make_option(c("--methods"), type="character", default="all", 
+              help=paste0("methods to run [default= %default], one of:\n", 
+                          paste0(names(methods), collapse = "\n")), metavar="character")
+  )
+
+opt_parser = OptionParser(option_list=option_list)
+opt = parse_args(opt_parser)
+
+
+res_dir <- opt$outdir
+
+data_dir <- opt$datadir
 
 allfiles <- list.files(path = data_dir, recursive = TRUE, pattern = "*.csv",  full.names = TRUE)
 
-methods <- methods["optim_pval_ica"]
-for (filename in allfiles){
+if (opt$methods != "all"){
+  mthds_names <- strsplit(gsub(" ", "", opt$methods), ",")[[1]]
+  methods <- methods[mthds_names]
+  message("running: ", names(methods))
+}
+
+pboptions(type = "txt")
+pblapply(allfiles, function(filename){
   name <- basename(filename)
   
   
@@ -18,7 +43,7 @@ for (filename in allfiles){
   parsed <- sapply(info, function(x) strsplit(gsub("# ", "", x), " = "))
   names(parsed) <- lapply(parsed, function(x) x[1])
   data <- read.csv(con, header = TRUE, comment.char = "#")
-  
+
   parsed$outdir[2] <- paste0("\"", parsed$outdir[2], "\"")
   parsed$dist[2] <- paste0("\"", parsed$dist[2], "\"")
   parsed$noise[2] <- paste0("\"", parsed$noise[2], "\"")
@@ -35,25 +60,27 @@ for (filename in allfiles){
     meth(x = x, y = y, proxy = U, rank = 20)
   })
   
-  evals <- sapply(results, function(res){
-    sapply(evaluations, function(eval) eval(res, Z, args))
-  })
-  ### save results:
+  results$oracle <- c(Z[,args$ic])
   
+  
+  evals <- lapply(results, function(res){
+    sapply(evaluations, function(eval) eval(res, Z, x, y, args))
+  })
+  
+  ### save results:
   for (nm in names(results)){
     dir.create(file.path(res_dir, nm), recursive = TRUE, showWarnings = FALSE)
-    
     write.csv(results[[nm]], file = file.path(res_dir, nm, name), row.names = FALSE)
+    
+    EE <- evals[[nm]]
+    EE <- c(EE, args[c("ic", "causal_coeff", "dist", "noise", "latents",
+                           "confounder", "proxy", "size", "noisesd", "distsd",
+                           "independent")])
+    a <- tail(args$coefx, 1)
+    b <- args$causal_coeff
+    c <- tail(args$coefy, 1)
+    EE$ab_c <- a*b + c
+    EE$method <- nm
+    write.csv(as.data.frame(EE), file = file.path(res_dir, nm, paste0("evals_", name)), row.names = FALSE)
   }
-  
-  EE <- reshape2::melt(evals, varnames = c("stats", "method"))
-  EE <- cbind(EE, args[c("ic", "causal_coeff", "dist", "noise", "latents",
-                         "confounder", "proxy", "size", "noisesd", "distsd",
-                         "independent")])
-  a <- tail(args$coefx, 1)
-  b <- tail(args$coefy, 1)
-  c <- args$causal_coeff
-  EE$ab_c <- a*b - c
-  
-  write.csv(EE, file = file.path(res_dir, paste0("optim_pval_ica_", name)), row.names = FALSE)
-}
+}, cl = opt$ncl)
