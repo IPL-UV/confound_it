@@ -1,3 +1,11 @@
+
+get_pvals <- function(zz, x, y, method = "sum"){
+  m1 <- lm(x ~ zz) 
+  m2 <- lm(y ~ zz + x)
+  return(list(px = summary(m1)$coefficients[2,4], py = summary(m2)$coefficients[2,4]))
+}
+
+
 RES <- function(zz, UU, x, y){
   UU <- scale(UU, scale = FALSE)
   y <- scale(y)
@@ -8,7 +16,7 @@ RES <- function(zz, UU, x, y){
   a1 <- sum(residuals(my1)^2)
   b1 <- sum(residuals(mx1)^2)
   
-  U1 <- qr.Q(qr(cbind(zz, UU)))[,2:ncol(UU)] ## hoping pivoting is not used
+  U1 <- qr.Q(qr(cbind(zz, UU)))[,-1] ## hoping pivoting is not used
   my2 <- lm(y ~ x + U1)
   a2 <-  sum(residuals(my2)^2)
   mx2 <- lm(x ~ U1)
@@ -92,6 +100,17 @@ sel_ica <- function(x, y, proxy, rank = 10, ...){
   return(zest)
 }
 
+selnaive_ica <- function(x, y, proxy, rank = 10, ...){
+  Ureduced <- fastICA::fastICA(proxy, n.comp = rank, ...)$S
+  
+  pvals <- sapply(seq_len(ncol(Ureduced)), function(i) sum(unlist(get_pvals(Ureduced[,i], x, y))))
+  
+  imin <- which.min(pvals)
+  
+  zest <- Ureduced[,imin]
+  return(zest)
+}
+
 
 pls_1 <- function(x, y, proxy, rank = 10, ...){
   res <- ropls::opls(x = proxy, y = cbind(x,y), predI = rank,
@@ -100,7 +119,7 @@ pls_1 <- function(x, y, proxy, rank = 10, ...){
   return(unname(est[,1]))
 }
 
-pls_sel <- function(x, y, proxy, rank = 10, ...){
+sel_pls <- function(x, y, proxy, rank = 10, ...){
   res <- ropls::opls(x = proxy, y = cbind(x,y), predI = rank,
                      fig.pdfC = "none", info.txtC = "none")
   est <- res@scoreMN
@@ -112,14 +131,35 @@ pls_sel <- function(x, y, proxy, rank = 10, ...){
   
   imin <- which.min(pvals)
   return(unname(est[,imin]))
-  }
+}
+
+selnaive_pls <- function(x, y, proxy, rank = 10, ...){
+  res <- ropls::opls(x = proxy, y = cbind(x,y), predI = rank,
+                     fig.pdfC = "none", info.txtC = "none")
+  est <- res@scoreMN
+  
+  pvals <- sapply(seq_len(ncol(est)), function(i) sum(unlist(get_pvals(est[,i], x, y))))
+  
+  imin <- which.min(pvals)
+  return(unname(est[,imin]))
+}
+
+opls_y <- function(x, y, proxy, ...){
+  res <- ropls::opls(x = proxy, y = y, predI = 1, orthoI = 1,
+                     fig.pdfC = "none", info.txtC = "none")
+  est <- res@scoreMN
+  return(est[,1])
+}
 
 methods <- list(
-  pca1 = function(x, y, proxy, ...){return(prcomp(proxy, rank. = 1, ...)$x)},
+  pca1 = function(x, y, proxy, rank, ...){return(prcomp(proxy, rank. = 1, ...)$x)},
   pls1 = pls_1,
-  pls_sel = pls_sel,
-  sel_ica = sel_ica,
-  sel_pca = sel_pca#,
+  opls_y = opls_y,
+  pls_sel = sel_pls,
+  pls_sel_naive = selnaive_pls,
+  ica_sel = sel_ica,
+  ica_sel_naive = selnaive_ica,
+  pca_sel = sel_pca#,
   #optim_pval = function(x, y, proxy, rank = 10) optim_pval(x, y, proxy = proxy,
   #                                                         rank = rank,
   #                                                         ica = FALSE),

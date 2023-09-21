@@ -37,9 +37,8 @@ pboptions(type = "txt")
 pblapply(allfiles, function(filename){
   name <- basename(filename)
   
-  
   con <- file(filename)
-  info <- readLines(con, 18)
+  info <- readLines(con, 19)
   parsed <- sapply(info, function(x) strsplit(gsub("# ", "", x), " = "))
   names(parsed) <- lapply(parsed, function(x) x[1])
   data <- read.csv(con, header = TRUE, comment.char = "#")
@@ -64,7 +63,7 @@ pblapply(allfiles, function(filename){
   
   
   evals <- lapply(results, function(res){
-    sapply(evaluations, function(eval) eval(res, Z, x, y, args))
+    sapply(evaluations, function(eval) eval(res, Z, x, y, U, args))
   })
   
   ### save results:
@@ -76,11 +75,9 @@ pblapply(allfiles, function(filename){
     EE <- c(EE, args[c("ic", "causal_coeff", "dist", "noise", "latents",
                            "confounder", "proxy", "size", "noisesd", "distsd",
                            "independent")])
-    a <- tail(args$coefx, 1)
-    b <- args$causal_coeff
-    c <- tail(args$coefy, 1)
-    EE$ab_c <- a*b + c
     EE$method <- nm
     write.csv(as.data.frame(EE), file = file.path(res_dir, nm, paste0("evals_", name)), row.names = FALSE)
   }
-}, cl = opt$ncl)
+  return(NULL)
+}, cl = NULL) #opt$ncl)
+

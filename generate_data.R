@@ -24,6 +24,8 @@ option_list = list(
                      [default=%default]"),
   make_option(c("--independent"), action = "store_true", default = FALSE,
               help = "if latents should be independent [default= %default]"),
+  make_option(c("--noiseproxy"), type = "double", default = 0.0,
+              help = "noise added in the proxy [default= %default]"),
   make_option(c("--outdir"), type="character", default="data", 
               help="output directory [default= %default]", metavar="character"),
   make_option(c("--ncl"), type="integer", default=as.integer(1), 
@@ -57,9 +59,12 @@ tmstmp <- format(Sys.time(), "%H:%M:%S_%d%m%Y")
 exp_dir <- file.path(opt$outdir)
 dir.create(exp_dir, showWarnings = FALSE, recursive = TRUE)
 
-cat("Arguments:\n", file = file.path(exp_dir, paste0(tmstmp, "_log.txt")))
+cat("\n ------------------- \n ", file = file.path(exp_dir, "log.txt"),
+    append = TRUE)
+cat(tmstmp, file = file.path(exp_dir, "log.txt"), append = TRUE)
+cat("Arguments:\n", file = file.path(exp_dir, "log.txt"), append = TRUE)
 cat(paste(names(opt), as.character(opt), collapse = "\n"),
-    file = file.path(exp_dir, paste0(tmstmp, "_log.txt")), append = TRUE)
+    file = file.path(exp_dir, "log.txt"), append = TRUE)
 
 
 ## expand options
@@ -96,19 +101,20 @@ for (i in seq_len(nrow(options))){
     ## define proxy as random mixing of latents
     nproxy <- oo$proxy
     A <- matrix(rnorm(latents * nproxy), nrow = latents, ncol = nproxy)
-    U <- Z %*% A
+    U <- Z %*% A + rnorm(nrow(Z) * ncol(A), 0, sd = oo$noiseproxy)
     
     ### the causal system X --> Y
-    truecausal <- runif(1, min = -1, max = +1)
+    truecausal <- runif(1, min = 0.5, max = 1.5)
     freelatents <- latents - oo$confounder
     ix <- sample(freelatents, freelatents / 3) ## latents affecting x
     iy <- sample((1:freelatents)[-ix], freelatents / 3) ## latents affecting y
-    coefx <- runif(length(ix) + oo$confounder, min = -1, max = +1)
-    coefy <- runif(length(iy) + oo$confounder, min = -1, max = +1)
+    coefx <- runif(length(ix) + oo$confounder, min = 0.5, max = +1.5)
+    coefy <- runif(length(iy) + oo$confounder, min = 0.5, max = +1.5)
     ic <- tail(seq_len(latents), oo$confounder)
     ## define X -> Y , with latents Z[,ic] as confounder
     x <- Z[,c(ix, ic), drop = FALSE] %*% coefx + noisefun(N, oo$noisesd)
     y <- truecausal * x + Z[,c(iy, ic), drop = FALSE] %*% coefy + noisefun(N, oo$noisesd)
+
     
     
     
@@ -121,20 +127,18 @@ for (i in seq_len(nrow(options))){
     oo_p$coefx <- coefx
     oo_p$coefy <- coefy
     dat <- data.frame(Z = Z, U = U, X = x, Y = y)
-    filename <- file.path(exp_dir, paste0(tmstmp, "_", i, "_rep",r,"_", oo$noise, oo$noisesd,
+    filename <- file.path(exp_dir, paste0("rep",r,"_", oo$noise, oo$noisesd,
                                           oo$dist, oo$distsd,
                                           ifelse(oo$independent,
                                                  "_independent", 
                                                  "_dependent"), 
-                                          "_", oo$latents, "_", oo$confounder, "_", oo$proxy, ".csv"))
+                                          "_", oo$latents, "_",
+                                          oo$confounder,
+                                          "_", oo$proxy,
+                                          "_", oo$size, ".csv"))
     con <- file(filename, open = "wt")
     writeLines(paste("#", names(oo_p),"=",as.character(oo_p)), con = con)
     write.csv(dat, con, row.names = FALSE)
     close(con)
   }
 }
-
-
-
-
-
