@@ -36,4 +36,4 @@ Rscript generate_data.R --outdir data_noisyproxy --noiseproxy 1 --rep 100 --late
 Rscript generate_data.R --outdir data_noisyproxy --noiseproxy 1 --rep 100 --latents 20 --proxy 5000 --dist  gamma --noise gaussian --independent --size 500
 
 
-Rscript run_methods.R --ncl 2 --data_dir data_noisyproxy --outdir results_noisyproxy
+Rscript run_methods.R --ncl 2 --datadir data_noisyproxy --outdir results_noisyproxy

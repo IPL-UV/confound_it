@@ -12,6 +12,17 @@ evaluations <- list(
     cols <- coef(lm(y ~ x + as.matrix(proxy)))[2]
     return(unname(abs(cest - args$causal_coeff)) / unname(abs(cols - args$causal_coeff)))
   },
+  ae_cc_vs_proxysmall = function(zest, z, x, y, proxy, args){
+    cest <- coef(lm(y ~ x + zest))[2]
+    cols <- coef(lm(y ~ x + as.matrix(proxy[,1:args$latents])))[2]
+    return(unname(abs(cest - args$causal_coeff)) / unname(abs(cols - args$causal_coeff)))
+  },
+  ae_cc_vs_pca = function(zest, z, x, y, proxy, args){
+    pca <- prcomp(proxy, rank. = args$latents)$x
+    cest <- coef(lm(y ~ x + zest))[2]
+    cols <- coef(lm(y ~ x + pca))[2]
+    return(unname(abs(cest - args$causal_coeff)) / unname(abs(cols - args$causal_coeff)))
+  },
   ae_cc = function(zest, z, x, y, proxy, args){
     cest <- coef(lm(y ~ x + zest))[2]
     return(unname(abs(cest - args$causal_coeff)))

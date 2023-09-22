@@ -84,6 +84,18 @@ sel_pca <- function(x, y, proxy, rank = 10, ...){
   return(zest)
 }
 
+selnaive_pca <- function(x, y, proxy, rank = 10, ...){
+  Ureduced <- prcomp(proxy, rank. = 10, ...)$x
+  
+  
+  pvals <- sapply(seq_len(ncol(Ureduced)), function(i) sum(unlist(get_pvals(Ureduced[,i], x, y))))
+  
+  imin <- which.min(pvals)
+  
+  zest <- Ureduced[,imin]
+  return(zest)
+}
+
 
 sel_ica <- function(x, y, proxy, rank = 10, ...){
   Ureduced <- fastICA::fastICA(proxy, n.comp = rank, ...)$S
@@ -152,14 +164,14 @@ opls_y <- function(x, y, proxy, ...){
 }
 
 methods <- list(
-  pca1 = function(x, y, proxy, rank, ...){return(prcomp(proxy, rank. = 1, ...)$x)},
-  pls1 = pls_1,
-  opls_y = opls_y,
-  pls_sel = sel_pls,
+  #pca1 = function(x, y, proxy, rank, ...){return(prcomp(proxy, rank. = 1, ...)$x)},
+  #pls1 = pls_1,
+  #opls_y = opls_y,
+  #pls_sel = sel_pls,
   pls_sel_naive = selnaive_pls,
-  ica_sel = sel_ica,
+  #ica_sel = sel_ica,
   ica_sel_naive = selnaive_ica,
-  pca_sel = sel_pca#,
+  pca_sel_naive = selnaive_pca#,
   #optim_pval = function(x, y, proxy, rank = 10) optim_pval(x, y, proxy = proxy,
   #                                                         rank = rank,
   #                                                         ica = FALSE),

@@ -55,16 +55,16 @@ pblapply(allfiles, function(filename){
   U <- data[, grep("U.", names(data))]
   Z <- data[, grep("Z.", names(data))]
   
-  results <- lapply(methods, function(meth){
+  system.time(results <- lapply(methods, function(meth){
     meth(x = x, y = y, proxy = U, rank = 20)
-  })
+  }))
   
   results$oracle <- c(Z[,args$ic])
   
   
-  evals <- lapply(results, function(res){
+  system.time(evals <- lapply(results, function(res){
     sapply(evaluations, function(eval) eval(res, Z, x, y, U, args))
-  })
+  }))
   
   ### save results:
   for (nm in names(results)){
