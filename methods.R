@@ -1,51 +1,22 @@
 
-get_pvals <- function(zz, x, y, method = "sum"){
+get_pvals <- function(zz, x, y){
   m1 <- lm(x ~ zz) 
   m2 <- lm(y ~ zz + x)
   return(list(px = summary(m1)$coefficients[2,4], py = summary(m2)$coefficients[2,4]))
 }
 
 
-RES <- function(zz, UU, x, y){
-  UU <- scale(UU, scale = FALSE)
-  y <- scale(y)
+optim_res<- function(x, y, proxy, rank = 10, ica = FALSE){
+  
   x <- scale(x)
-  zz <- scale(zz)
-  my1 <- lm(y ~ x + UU)
-  mx1 <- lm(x ~ UU)
-  a1 <- sum(residuals(my1)^2)
-  b1 <- sum(residuals(mx1)^2)
-  
-  U1 <- qr.Q(qr(cbind(zz, UU)))[,-1] ## hoping pivoting is not used
-  my2 <- lm(y ~ x + U1)
-  a2 <-  sum(residuals(my2)^2)
-  mx2 <- lm(x ~ U1)
-  b2 <- sum(residuals(mx2)^2)
-  
-  ##1 compute the two F-statistics for
-  ## (my1 vs my2) and for (mx1 vs mx2)
-  fy = (a2 - a1) / a1
-  fx = (b2 - b1) / b1
-  
-  ## compute the p-values
-  py  = pf(fy * (nrow(UU) - ncol(UU) - 1) ,
-           df1 = 1, df2 =  nrow(UU) - ncol(UU) - 1, lower.tail = FALSE)
-  px  = pf(fx * (nrow(UU) - ncol(UU)) ,
-           df1 = 1, df2 = nrow(UU) - ncol(UU), lower.tail = FALSE)
-  
-  return(list(a = a2, b = b2, fy = fy, fx = fx, py = py ,  px = px))
-}
-
-
-
-optim_pval <- function(x, y, proxy, rank = 10, ica = FALSE){
-  
+  y <- scale(y)
   ## define objective function
   fopt <- function(w, UU){
     w <- w / sqrt(sum(w^2))
     zz <- UU %*% w
-    rr <- RES(zz, UU, x, y)
-    log(rr$px + rr$py)
+    m1 <- lm(x ~ zz) 
+    m2 <- lm(y ~ zz + x)
+    sum(residuals(m1)) + sum(residuals(m2))
   }
   
   if (ica){
@@ -69,21 +40,6 @@ optim_pval <- function(x, y, proxy, rank = 10, ica = FALSE){
 }
 
 
-sel_pca <- function(x, y, proxy, rank = 10, ...){
-  Ureduced <- prcomp(proxy, rank. = 10, ...)$x
-  
-  res <- lapply(seq_len(ncol(Ureduced)), function(i){
-    RES(Ureduced[,i], Ureduced, x, y)
-  })
-  
-  pvals <- sapply(res, function(rr) rr$px + rr$py)
-  
-  imin <- which.min(pvals)
-  
-  zest <- Ureduced[,imin]
-  return(zest)
-}
-
 selnaive_pca <- function(x, y, proxy, rank = 10, ...){
   Ureduced <- prcomp(proxy, rank. = 10, ...)$x
   
@@ -97,20 +53,6 @@ selnaive_pca <- function(x, y, proxy, rank = 10, ...){
 }
 
 
-sel_ica <- function(x, y, proxy, rank = 10, ...){
-  Ureduced <- fastICA::fastICA(proxy, n.comp = rank, ...)$S
-  
-  res <- lapply(seq_len(ncol(Ureduced)), function(i){
-    RES(Ureduced[,i], Ureduced, x, y)
-  })
-  
-  pvals <- sapply(res, function(rr) rr$px + rr$py)
-  
-  imin <- which.min(pvals)
-  
-  zest <- Ureduced[,imin]
-  return(zest)
-}
 
 selnaive_ica <- function(x, y, proxy, rank = 10, ...){
   Ureduced <- fastICA::fastICA(proxy, n.comp = rank, ...)$S
@@ -124,31 +66,9 @@ selnaive_ica <- function(x, y, proxy, rank = 10, ...){
 }
 
 
-pls_1 <- function(x, y, proxy, rank = 10, ...){
-  res <- ropls::opls(x = proxy, y = cbind(x,y), predI = rank,
-                     fig.pdfC = "none", info.txtC = "none")
-  est <- res@scoreMN
-  return(unname(est[,1]))
-}
-
-sel_pls <- function(x, y, proxy, rank = 10, ...){
-  res <- ropls::opls(x = proxy, y = cbind(x,y), predI = rank,
-                     fig.pdfC = "none", info.txtC = "none")
-  est <- res@scoreMN
-  res <- lapply(seq_len(ncol(est)), function(i){
-    RES(est[,i], est, x, y)
-  })
-  
-  pvals <- sapply(res, function(rr) rr$px + rr$py)
-  
-  imin <- which.min(pvals)
-  return(unname(est[,imin]))
-}
-
 selnaive_pls <- function(x, y, proxy, rank = 10, ...){
-  res <- ropls::opls(x = proxy, y = cbind(x,y), predI = rank,
-                     fig.pdfC = "none", info.txtC = "none")
-  est <- res@scoreMN
+  res <- mdatools::pls.run(x = proxy, y = cbind(x,y), ncomp = rank)
+  est <- res$xscores
   
   pvals <- sapply(seq_len(ncol(est)), function(i) sum(unlist(get_pvals(est[,i], x, y))))
   
@@ -163,20 +83,12 @@ opls_y <- function(x, y, proxy, ...){
   return(est[,1])
 }
 
+
 methods <- list(
-  #pca1 = function(x, y, proxy, rank, ...){return(prcomp(proxy, rank. = 1, ...)$x)},
-  #pls1 = pls_1,
-  #opls_y = opls_y,
-  #pls_sel = sel_pls,
   pls_sel_naive = selnaive_pls,
-  #ica_sel = sel_ica,
   ica_sel_naive = selnaive_ica,
   pca_sel_naive = selnaive_pca#,
-  #optim_pval = function(x, y, proxy, rank = 10) optim_pval(x, y, proxy = proxy,
+  #optim_res = function(x, y, proxy, rank = 10) optim_res(x, y, proxy = proxy,
   #                                                         rank = rank,
-  #                                                         ica = FALSE),
-  #optim_pval_ica = function(x, y, proxy, rank = 10) optim_pval(x, y, 
-  #                                                             proxy = proxy,
-  #                                                             rank = rank,
-  #                                                             ica = TRUE)
+  #                                                         ica = FALSE)
 )

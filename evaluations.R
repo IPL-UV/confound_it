@@ -1,45 +1,49 @@
 source("methods.R")
 
 evaluations <- list(
-  cor = function(zest, z, x, y, proxy, args) abs(cor(zest, z[,args$ic])), 
-  ae_cc_vs_ols = function(zest, z, x, y, proxy,  args){
-    cest <- coef(lm(y ~ x + zest))[2]
-    cols <- coef(lm(y ~ x))[2]
-    return(unname(abs(cest - args$causal_coeff)) / unname(abs(cols - args$causal_coeff)))
+  cor = function(est, z, x, y, proxy, args) abs(cor(est$z, z[,args$ic])), 
+  ae_cc_vs_ols = function(est, z, x, y, proxy, args){
+    c1 <- coef(lm(y ~ x))[2]
+    return(unname(abs(est$c - args$causal_coeff)) / 
+             unname(abs(c1 - args$causal_coeff)))
   },
-  ae_cc_vs_proxy = function(zest, z, x, y, proxy, args){
-    cest <- coef(lm(y ~ x + zest))[2]
-    cols <- coef(lm(y ~ x + as.matrix(proxy)))[2]
-    return(unname(abs(cest - args$causal_coeff)) / unname(abs(cols - args$causal_coeff)))
+  ae_cc_vs_proxy = function(est, z, x, y, proxy, args){
+    c1 <- coef(lm(y ~ x + as.matrix(proxy)))[2]
+    return(unname(abs(est$c - args$causal_coeff)) / unname(abs(c1 - args$causal_coeff)))
   },
-  ae_cc_vs_proxysmall = function(zest, z, x, y, proxy, args){
-    cest <- coef(lm(y ~ x + zest))[2]
-    cols <- coef(lm(y ~ x + as.matrix(proxy[,1:args$latents])))[2]
-    return(unname(abs(cest - args$causal_coeff)) / unname(abs(cols - args$causal_coeff)))
-  },
-  ae_cc_vs_pca = function(zest, z, x, y, proxy, args){
+  ae_cc_vs_pca = function(est, z, x, y, proxy, args){
     pca <- prcomp(proxy, rank. = args$latents)$x
-    cest <- coef(lm(y ~ x + zest))[2]
-    cols <- coef(lm(y ~ x + pca))[2]
-    return(unname(abs(cest - args$causal_coeff)) / unname(abs(cols - args$causal_coeff)))
+    c1 <- coef(lm(y ~ x + pca))[2]
+    return(unname(abs(est$c - args$causal_coeff)) / unname(abs(c1 - args$causal_coeff)))
   },
-  ae_cc = function(zest, z, x, y, proxy, args){
-    cest <- coef(lm(y ~ x + zest))[2]
-    return(unname(abs(cest - args$causal_coeff)))
+  ae_cc_vs_pearlpca = function(est, z, x, y, proxy, args){
+    pca <- prcomp(proxy, rank. = 2)$x
+    v <- pca[,1]
+    w <- pca[,2]
+    # https://arxiv.org/pdf/1203.3504.pdf Eq (12)
+    c0 <- (cov(x, y) * cov(x, v) - cov(y, w) * cov(w, v)) / 
+      (cov(x, w) * var(x) - cov(x, w) * cov(w, v))
+    return(unname(abs(est$c - args$causal_coeff)) / unname(abs(c0 - args$causal_coeff)))
   },
-  are_cc = function(zest, z, x, y, proxy, args){
-    cest <- coef(lm(y ~ x + zest))[2]
-    return(unname(abs(cest - args$causal_coeff) / abs(args$causal_coeff)))
+  ae_cc_vs_pearlfirst = function(est, z, x, y, proxy, args){
+    v <- proxy[,1]
+    w <- proxy[,2]
+    # https://arxiv.org/pdf/1203.3504.pdf Eq (12)
+    c0 <- (cov(x, y) * cov(x, v) - cov(y, w) * cov(w, v)) / 
+      (cov(x, w) * var(x) - cov(x, w) * cov(w, v))
+    return(unname(abs(est$c - args$causal_coeff)) / unname(abs(c0 - args$causal_coeff)))
   },
-  se_cc = function(zest, z, x, y, proxy, args){
-    cest <- coef(lm(y ~ x + zest))[2]
-    return(unname((cest - args$causal_coeff)^2))
+  ae_cc = function(est, z, x, y, proxy, args){
+    return(unname(abs(est$c - args$causal_coeff)))
   },
-  pvals_naive = function(zest, z, x, y, proxy, args){
-    get_pvals(zest, x, y)
+  are_cc = function(est, z, x, y, proxy, args){
+    return(unname(abs(est$c - args$causal_coeff) / abs(args$causal_coeff)))
   },
-  pvals_adj = function(zest, z, x, y, proxy, args){
-    return(RES(zest, proxy, x, y)[c("px", "py")])
+  se_cc = function(est, z, x, y, proxy, args){
+    return(unname((est$c - args$causal_coeff)^2))
+  },
+  pvals_naive = function(est, z, x, y, proxy, args){
+    get_pvals(est$z, x, y)
   },
   conf_x = function(zest, z, x, y, proxy, args){
     tail(args$coefx, 1)
