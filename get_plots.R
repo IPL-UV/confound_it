@@ -10,7 +10,7 @@ nm <- c(names(evaluations), "pvals_adj.px", "pvals_adj.py",
         "pvals_naive.px", "pvals_naive.py")
 DD <- reshape2::melt(allres, measure.vars = nm[c(1:8)],
                      variable.name = "stats")
-DD <- DD[DD$size > 10,]
+#DD <- DD[DD$size > 10,]
 DD$pvals <- DD$pvals_naive.px + DD$pvals_naive.py
 DD$method <- as.factor(DD$method)
 levels(DD$method) <- list(oracle = "oracle",
