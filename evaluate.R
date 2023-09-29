@@ -15,7 +15,8 @@ option_list = list(
               help="number of parallel process to use [default= %default]", metavar="integer"),
   make_option(c("--methods"), type="character", default="all", 
               help=paste0("methods to run [default= %default], one of:\n", 
-                          paste0(names(methods), collapse = "\n")), metavar="character")
+                          paste0(names(methods), collapse = "\n")), metavar="character"),
+  make_option("--oracle", action = "store_true", default = FALSE, help = "whether to evaluate oracle")
 )
 
 opt_parser = OptionParser(option_list=option_list)
@@ -28,9 +29,14 @@ data_dir <- opt$datadir
 
 if (opt$methods != "all"){
   mthds_names <- strsplit(gsub("", "", opt$methods), ",")[[1]]
-  methods <- methods[mthds_names]
-  message("running: ", names(methods))
+}else {
+  mthds_names <- names(methods)
 }
+if (opt$oracle){
+  mthds_names <- c("oracle", mthds_names)
+}
+message("evaluating: \n", paste(mthds_names, collapse = "\n"))
+
 
 allfiles <- list.files(path = data_dir, recursive = TRUE, pattern = "*.csv",  full.names = TRUE)
 
@@ -57,16 +63,16 @@ pblapply(allfiles, function(filename){
   U <- data[, grep("U.", names(data))]
   Z <- data[, grep("Z.", names(data))]
   
-  results <- lapply(c("oracle", names(methods)), function(nm){
+  results <- lapply(mthds_names, function(nm){
     tryCatch(read.csv(file.path(res_dir, nm, name)), error = function(e)  NULL)
   })
   
-  names(results) <- c("oracle", names(methods))
+  names(results) <- mthds_names
   
   evals <- lapply(results, function(res){
     if (!is.null(res)){
-      model <- lm(y ~ x + res[,1])
-      est <- list(z = res[,1], c = coef(model)[2], ci = confint(model)[2,])
+      model <- lm(y ~ x + res[,ncol(res)])
+      est <- list(z = res[,ncol(res)], c = coef(model)[2], ci = confint(model)[2,])
     }
 
     sapply(evaluations, function(eval) {

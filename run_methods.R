@@ -14,7 +14,9 @@ option_list = list(
               help="number of parallel process to use [default= %default]", metavar="integer"),
   make_option(c("--methods"), type="character", default="all", 
               help=paste0("methods to run [default= %default], one of:\n", 
-                          paste0(names(methods), collapse = "\n")), metavar="character")
+                          paste0(names(methods), collapse = "\n")), metavar="character"),
+  make_option("--oracle", action = "store_true", default = FALSE, help = "whether to run oracle")
+  
   )
 
 opt_parser = OptionParser(option_list=option_list)
@@ -30,7 +32,11 @@ allfiles <- list.files(path = data_dir, recursive = TRUE, pattern = "*.csv",  fu
 if (opt$methods != "all"){
   mthds_names <- strsplit(gsub(" ", "", opt$methods), ",")[[1]]
   methods <- methods[mthds_names]
-  message("running: ", names(methods))
+}
+
+message("running: \n", paste(names(methods), collapse = "\n"))
+if (opt$oracle){
+  message("oracle")
 }
 
 pboptions(type = "txt")
@@ -59,7 +65,9 @@ pblapply(allfiles, function(filename){
     tryCatch(meth(x = x, y = y, proxy = U, rank = args$latents), error = function(e) NULL)
   }))
   
-  results$oracle <- c(Z[,args$ic])
+  if (opt$oracle){
+    results$oracle <- c(Z[,args$ic])
+  }
   
   ### save results:
   for (nm in names(results)){
