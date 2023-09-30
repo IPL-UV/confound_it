@@ -14,6 +14,8 @@ The following R packages need to be installed:
 - reshape2
 - pbapply
 - optparse
+- fastICA
+- mdatools
 
 The following python libraries need to be available:
 
