@@ -21,7 +21,7 @@ The following python libraries need to be available:
 
 ## reproduce the simulation experiments 
 
-TO run the simulation experiments and produce the results we provide:
+To run the simulation experiments and produce the results we provide in the `simualtions/` folder:
 
 - `generate_data.R` a script which generate the synthetic data (run `Rscript generate_data.R --help` to list all the options).
 - `run_methods.R` a script which generate the synthetic data (run `Rscript run_methods.R --help` to list all the options).
