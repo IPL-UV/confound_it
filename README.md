@@ -19,7 +19,10 @@ The following R packages need to be installed:
 
 The following python libraries need to be available:
 
- TODO 
+ - numpy
+ - pandas
+ - sklearn
+ - jax 
 
 ## reproduce the simulation experiments 
 
@@ -33,6 +36,12 @@ To run the simulation experiments and produce the results we provide in the `sim
 The exact simualtion and experiments can be reproduced with the commands in the `experiments.sh` file.  
 
 
-## reproduce the examples
+## reproduce GD-PCF method and experiments
 
-TODO 
+To apply the GD-PCF on the simulation experiments and produce the results we provide the gd-pcf/folder:
+- funcs_LNC_lin.py  functions that implement the GD-PCF method with linear assumptions
+- funcs_LNC.py function that implement the GD-PCF method without assuming linearity.
+- experiment.py script to apply GD-PCF on one dataset.
+- slurm_script.py calls the experiment.py script for a dataset "job", parametrized by a slurm script that calls it
+- processResults.py functions for gathering the results of GD-PCF for individual datasets which are stored as pickle files and obtaining performance measures.
+- LNC_job.sh slurm script for running GD-PCF on different datasets in parallel 
