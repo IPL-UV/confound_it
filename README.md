@@ -7,7 +7,7 @@ _Recovering latent confounders from high-dimensional proxy variables_
 
 ## requirements
 
-The scripts need R (for the simualtion experiments) and pyhton (for the real-world examples) installed. 
+The scripts need R (for the simulation experiments) and pyhton (for the real-world examples) installed. 
 
 The following R packages need to be installed:
 - ggplot2
